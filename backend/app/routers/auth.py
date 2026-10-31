@@ -132,7 +132,7 @@ def refresh_access_token(
             detail="Invalid or expired refresh token",
         )
     refresh_token.revoked_at = datetime.now(timezone.utc)
-    
+    db.commit()
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token()
     return {

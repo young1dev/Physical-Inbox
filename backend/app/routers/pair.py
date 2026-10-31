@@ -14,13 +14,13 @@ from app.database.connection import get_db
 router = APIRouter(prefix="/auth/pair", tags=["Device Authentication"])
 
 
-@router.post("/auth/pair", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def pair(payload: PairDevice, db: Session = Depends(get_db)):
     device_id = payload.device_id
     user_id = payload.user_id
     credentials = payload.credentials
     credentials_hash = hash_pass(payload.credentials)
-    name= "Device 1"
+    name = "Device 1"
 
     configdevice = (
         db.query(ConfiguredDevice).filter((ConfiguredDevice.device_id == device_id))
@@ -41,16 +41,10 @@ def pair(payload: PairDevice, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid ID/credentials or password",
         )
-        
-    device = Device(
-        user_id=user_id,
-        credentials_hash=credentials_hash,
-        name=name
-    )
+
+    device = Device(user_id=user_id, credentials_hash=credentials_hash, name=name)
 
     db.add(device)
-    status = ConfiguredDevice(
-        status=True
-    )
-    db.add(status)
+    device_status = ConfiguredDevice(status=True)
+    db.add(device_status)
     db.commit()

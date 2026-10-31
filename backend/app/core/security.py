@@ -1,3 +1,9 @@
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from app.models.user import User
+from app.database.connection import get_db
+
 from pwdlib import PasswordHash
 import jwt
 import os
@@ -60,4 +66,46 @@ def create_refresh_token() -> str:
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
-def get_current_admin()
+bearer_scheme = HTTPBearer()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MjcxZjVkNC1hNGMwLTRiYzAtYTA2Mi0yYTUyN2Q1NTZlNjEiLCJleHAiOjIwLCJ0eXBlIjoiYWNjZXNzIn0.0s3adDLjXdRaeQhpWqJn5lj5gz7MOUqv8E8J4dnhKww"
+    payload = decode_access_token(token)
+    
+    if payload is None:
+        print( {"token": token, "payload": payload})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW_Authenticate": "Bearer"}
+        )
+        
+        
+    user_id = payload.get("sub")
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW_Authenticate": "Bearer"},
+        )
+        
+    user = (db.query(User).where(User.id == user_id)) 
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW_Authenticate": "Bearer"}
+        )
+      
+    return user
+    
+    
+def get_current_admin(current_user = Depends(get_current_user)):
+    if current_user.username !="Zico":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Admin acces required"
+        )
+    return current_user

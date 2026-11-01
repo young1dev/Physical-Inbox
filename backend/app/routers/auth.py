@@ -6,7 +6,13 @@ from app.schemas.auth import UserCreate, LoginRequest, RefreshTokenRequest
 from app.database.connection import get_db
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
-from app.core.security import hash_pass, verify_pass, create_access_token, create_refresh_token, hash_refresh_token
+from app.core.security import (
+    hash_pass,
+    verify_pass,
+    create_access_token,
+    create_refresh_token,
+    hash_refresh_token,
+)
 from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -73,18 +79,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         )
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token()
-    
+
     refresh_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(days=refresh_days)
-    
+
     refresh_token_record = RefreshToken(
         user_id=user.id,
         token_hash=hash_refresh_token(refresh_token),
-        expires_at=refresh_expires_at
+        expires_at=refresh_expires_at,
     )
     db.add(refresh_token_record)
     db.commit()
-    
+
     return {
         "user_id": str(user.id),
         "username": user.username,
@@ -93,6 +99,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "refresh_token": refresh_token,
     }
 
+
 @router.post("/refresh")
 def refresh_access_token(
     payload: RefreshTokenRequest,
@@ -100,43 +107,50 @@ def refresh_access_token(
 ):
     token_hash = hash_refresh_token(payload.refresh_token)
 
-    refresh_token = (
-        db.query(RefreshToken)
-        .where(RefreshToken.token_hash == token_hash)
-        .first()
+    refresh_tokens = (
+        db.query(RefreshToken).where(RefreshToken.token_hash == token_hash).first()
     )
 
-    if not refresh_token:
+    if not refresh_tokens:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
 
-    if refresh_token.revoked_at is not None:
+    if refresh_tokens.revoked_at is not None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has been revoked",
         )
 
-    if refresh_token.expires_at <= datetime.now(timezone.utc):
+    if refresh_tokens.expires_at <= datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has expired",
         )
 
-    user = db.query(User).where(User.id == refresh_token.user_id).first()
+    user = db.query(User).where(User.id == refresh_tokens.user_id).first()
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
-    refresh_token.revoked_at = datetime.now(timezone.utc)
-    db.commit()
+    refresh_tokens.revoked_at = datetime.now(timezone.utc)
+
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token()
+
+    refresh_token_record = RefreshToken(
+        user_id=user.id,
+        token_hash=hash_refresh_token(refresh_token),
+        expires_at=datetime.now(timezone.utc)
+        + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    
+    db.add(refresh_token_record)
+    db.commit()
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
     }
-    

@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Depends, HTTPException
 from app.schemas.auth import PairDevice
 from app.models.device import Device
 from app.models.configdevice import ConfiguredDevice
-
+from app.core.security import get_current_user
 from app.core.security import (
     hash_pass,
     verify_pass,
@@ -15,9 +15,9 @@ router = APIRouter(prefix="/auth/pair", tags=["Device Authentication"])
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def pair(payload: PairDevice, db: Session = Depends(get_db)):
+def pair(payload: PairDevice, db: Session = Depends(get_db), current_user= Depends(get_current_user)):
     device_id = payload.device_id
-    user_id = payload.user_id
+    user_id = current_user.id
     credentials = payload.credentials
     credentials_hash = hash_pass(payload.credentials)
     name = "Device 1"
@@ -42,9 +42,8 @@ def pair(payload: PairDevice, db: Session = Depends(get_db)):
             detail="Invalid ID/credentials or password",
         )
 
-    device = Device(user_id=user_id, credentials_hash=credentials_hash, name=name)
+    device = Device(user_id=user_id, credential_hash=credentials_hash, name=name)
 
     db.add(device)
-    device_status = ConfiguredDevice(status=True)
-    db.add(device_status)
+    configdevice.status = True
     db.commit()

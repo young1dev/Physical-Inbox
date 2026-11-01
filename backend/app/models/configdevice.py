@@ -14,7 +14,7 @@ class ConfiguredDevice(Base):
     )
     device_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     credential_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    status: Mapped[bool] = mapped_column(nullable=True)
+    status: Mapped[bool] = mapped_column(nullable=False, default=False)
     configured_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

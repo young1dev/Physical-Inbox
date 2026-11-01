@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
     email: EmailStr
-    username: str = Field(min_length=1, max_length=50)
+    username: str = Field(min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)
 
 
@@ -17,11 +17,7 @@ class RefreshTokenRequest(BaseModel):
 
 
 class PairDevice(BaseModel):
-    user_id: str = Field(..., min_length=1, max_length=255)
     device_id: str = Field(..., min_length=1, max_length=255)
     credentials: str = Field(..., min_length=1, max_length=255)
 
 
-class AddDevice(BaseModel):
-    device_id: str = Field(..., min_length=1, max_length=255)
-    credentials: str = Field(..., min_length=1, max_length=255)

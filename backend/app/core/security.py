@@ -116,7 +116,7 @@ def get_current_user(
 
 
 def get_current_admin(current_user=Depends(get_current_user)):
-    if current_user.username != "Zico":
+    if current_user.username != "zico":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin acces required"
         )

@@ -31,9 +31,9 @@ def pair(payload: PairDevice, db: Session = Depends(get_db), current_user= Depen
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid ID/credentials or password,",
         )
-    if not configdevice.status:
+    if configdevice.status:
         raise HTTPException(
-            status_code=status.HTTP_226_IM_USED, detail="Device is currently used"
+            status_code=status.HTTP_226_IM_USED, detail="Device is already paired"
         )
 
     if not verify_pass(credentials, configdevice.credential_hash):
